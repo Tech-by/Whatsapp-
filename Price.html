@@ -1,1 +1,424 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Naija Price List – Direct WhatsApp Share</title>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { font-size: 1.8rem; color: #075e54; text-align: center; }
+        .sub { text-align: center; color: #555; margin-bottom: 20px; }
+        label { font-weight: 600; display: block; margin: 12px 0 4px; }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 8px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+        button {
+            background-color: #25D366;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover { background-color: #128C7E; }
+        .item-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .item-row input { flex: 1; margin-bottom: 0; }
+        .remove-btn {
+            background-color: #dc3545;
+            width: auto;
+            padding: 0 16px;
+        }
+        .add-btn { background-color: #075e54; margin-top: 8px; }
+        .preview-area { text-align: center; }
+        #priceListPreview {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px 0;
+            display: inline-block;
+            width: 100%;
+            max-width: 400px;
+        }
+        .price-list {
+            width: 100%;
+            background: white;
+        }
+        .business-name {
+            font-size: 1.6rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px dashed #25D366;
+            padding-bottom: 8px;
+        }
+        .item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 1rem;
+        }
+        .watermark {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #aaa;
+            margin-top: 15px;
+            font-style: italic;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .btn-share-image {
+            background-color: #075e54;
+            flex: 1;
+        }
+        .btn-share-text {
+            background-color: #25D366;
+            flex: 1;
+        }
+        .btn-download {
+            background-color: #128C7E;
+            flex: 1;
+        }
+        footer { text-align: center; font-size: 0.75rem; color: #777; margin-top: 30px; }
+        @media (max-width: 600px) {
+            .item-row { flex-direction: column; }
+            .remove-btn { width: 100%; }
+        }
+        .info-note {
+            background: #e9f7ef;
+            padding: 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            color: #075e54;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>📋 Naija Price List Maker</h1>
+    <div class="sub">Auto-commas as you type. Send direct to WhatsApp as text or image.</div>
+
+    <label>🏪 Business name</label>
+    <input type="text" id="businessName" placeholder="E.g., Mama T's Kitchen">
+
+    <label>🛒 Products & prices</label>
+    <div id="itemsContainer"></div>
+    <button class="add-btn" id="addItemBtn">+ Add another product</button>
+    <button id="generateBtn">✨ Generate price list image</button>
+</div>
+
+<div class="card preview-area">
+    <h3>👇 Your image preview</h3>
+    <div id="priceListPreview" style="background: white; border-radius: 16px; overflow: hidden;">
+        <div style="padding: 30px; color: gray; text-align: center;">Click "Generate" to see preview</div>
+    </div>
+    <div class="action-buttons" id="actionButtons" style="display:none;">
+        <button id="shareImageBtn" class="btn-share-image">📤 Send as Image (share sheet)</button>
+        <button id="shareTextBtn" class="btn-share-text">💬 Send as Text (opens WhatsApp directly)</button>
+        <button id="downloadBtn" class="btn-download">💾 Download image</button>
+    </div>
+    <div class="info-note">
+        💡 <strong>Tip:</strong> "Send as Text" opens WhatsApp instantly with your price list. "Send as Image" lets you share the picture (tap WhatsApp).
+    </div>
+</div>
+
+<footer>⚡ </footer>
+
+<script>
+    // ---------- DOM elements ----------
+    const container = document.getElementById('itemsContainer');
+    const addBtn = document.getElementById('addItemBtn');
+    const generateBtn = document.getElementById('generateBtn');
+    const shareImageBtn = document.getElementById('shareImageBtn');
+    const shareTextBtn = document.getElementById('shareTextBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const actionButtons = document.getElementById('actionButtons');
+    const previewDiv = document.getElementById('priceListPreview');
+    const businessNameInput = document.getElementById('businessName');
+
+    let currentBlob = null;
+    let currentCanvas = null;
+
+    // ---------- Helper: add commas to a number string (e.g., "1500000" -> "1,500,000")
+    function addCommasToNumberString(str) {
+        let cleaned = str.replace(/[^0-9]/g, '');
+        if (cleaned === '') return '';
+        let number = parseInt(cleaned, 10);
+        if (isNaN(number)) return str;
+        return number.toLocaleString('en-NG');
+    }
+
+    // Real-time formatting for price inputs: as user types, add commas
+    function setupPriceInputFormatting(inputElement) {
+        inputElement.addEventListener('input', function(e) {
+            let cursorPos = this.selectionStart;
+            let rawValue = this.value;
+            // Remove existing commas and non-digits to get plain number
+            let digits = rawValue.replace(/,/g, '').replace(/[^0-9]/g, '');
+            if (digits === '') {
+                this.value = '';
+                return;
+            }
+            let formatted = parseInt(digits, 10).toLocaleString('en-NG');
+            this.value = formatted;
+            // Adjust cursor position (basic, works for most cases)
+            let newCursorPos = cursorPos + (formatted.length - rawValue.length);
+            this.setSelectionRange(newCursorPos, newCursorPos);
+            saveData(); // save after formatting
+        });
+    }
+
+    // ---------- Save and load data from localStorage ----------
+    function saveData() {
+        const businessName = businessNameInput.value;
+        const rows = document.querySelectorAll('.item-row');
+        const products = [];
+        for (let row of rows) {
+            const name = row.querySelector('.item-name').value;
+            const price = row.querySelector('.item-price').value;
+            products.push({ name, price });
+        }
+        localStorage.setItem('priceList_business', businessName);
+        localStorage.setItem('priceList_products', JSON.stringify(products));
+    }
+
+    function loadData() {
+        const savedBusiness = localStorage.getItem('priceList_business');
+        if (savedBusiness) businessNameInput.value = savedBusiness;
+        
+        const savedProducts = localStorage.getItem('priceList_products');
+        if (savedProducts) {
+            try {
+                const products = JSON.parse(savedProducts);
+                if (products.length > 0) {
+                    container.innerHTML = '';
+                    products.forEach((prod, idx) => {
+                        addProductRow(prod.name, prod.price, idx === products.length-1 ? false : true);
+                    });
+                    if (products.length === 0) addProductRow('', '', false);
+                } else {
+                    addProductRow('', '', false);
+                }
+            } catch(e) { addProductRow('', '', false); }
+        } else {
+            addProductRow('', '', false);
+            addProductRow('', '', true);
+        }
+        attachRemoveEvents();
+    }
+
+    function addProductRow(productName = '', productPrice = '', showRemove = true) {
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+            <input type="text" class="item-name" placeholder="Product name" value="${escapeHtml(productName)}">
+            <input type="text" class="item-price" placeholder="Price (e.g., 1500000)" value="${productPrice}">
+            ${showRemove ? '<button class="remove-btn">Remove</button>' : '<button class="remove-btn" style="display:none;">Remove</button>'}
+        `;
+        container.appendChild(row);
+        const priceInput = row.querySelector('.item-price');
+        // Apply real-time comma formatting
+        setupPriceInputFormatting(priceInput);
+        row.querySelector('.item-name').addEventListener('input', saveData);
+        priceInput.addEventListener('input', saveData);
+        if (showRemove) {
+            row.querySelector('.remove-btn').addEventListener('click', (e) => {
+                row.remove();
+                saveData();
+            });
+        }
+    }
+
+    function attachRemoveEvents() {
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.removeEventListener('click', () => {});
+            btn.addEventListener('click', (e) => {
+                e.target.closest('.item-row').remove();
+                saveData();
+            });
+        });
+    }
+
+    businessNameInput.addEventListener('input', saveData);
+    addBtn.addEventListener('click', () => {
+        addProductRow('', '', true);
+        saveData();
+    });
+
+    // ---------- Build price list HTML (with commas already in inputs, so no extra formatting needed in image) ----------
+    // But we also ensure the image shows commas (they are already stored)
+    function buildPriceListHTML() {
+        const businessName = businessNameInput.value.trim();
+        const rows = document.querySelectorAll('.item-row');
+        let itemsHTML = '';
+        for (let row of rows) {
+            const name = row.querySelector('.item-name').value.trim();
+            let priceRaw = row.querySelector('.item-price').value.trim();
+            if (name !== '' && priceRaw !== '') {
+                // priceRaw already has commas from input formatting, but ensure ₦ prefix
+                let priceDisplay = priceRaw.startsWith('₦') ? priceRaw : '₦' + priceRaw;
+                itemsHTML += `<div class="item"><span>${escapeHtml(name)}</span><span>${escapeHtml(priceDisplay)}</span></div>`;
+            }
+        }
+        if (itemsHTML === '') {
+            itemsHTML = '<div class="item" style="color:gray;">Add at least one product above</div>';
+        }
+        const businessHTML = businessName ? `<div class="business-name">${escapeHtml(businessName)}</div>` : '';
+        return `
+            <div class="price-list" style="background: white; padding: 20px; border-radius: 16px; width: 100%;">
+                ${businessHTML}
+                <div style="margin: 15px 0;">
+                    ${itemsHTML}
+                </div>
+                <div class="watermark">Made with PriceListNaija | Share on WhatsApp</div>
+            </div>
+        `;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // ---------- Generate image ----------
+    generateBtn.addEventListener('click', () => {
+        const htmlContent = buildPriceListHTML();
+        previewDiv.innerHTML = htmlContent;
+        const elementToCapture = previewDiv.firstElementChild;
+        if (!elementToCapture) {
+            alert('Please add at least one product');
+            return;
+        }
+        html2canvas(elementToCapture, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            logging: false
+        }).then(canvas => {
+            currentCanvas = canvas;
+            canvas.toBlob(blob => { currentBlob = blob; }, 'image/png');
+            const img = document.createElement('img');
+            img.src = canvas.toDataURL();
+            img.style.width = '100%';
+            img.style.borderRadius = '16px';
+            previewDiv.innerHTML = '';
+            previewDiv.appendChild(img);
+            actionButtons.style.display = 'flex';
+        }).catch(err => {
+            console.error(err);
+            alert('Error generating image. Try again.');
+        });
+    });
+
+    // ---------- Share as Image (share sheet) ----------
+    shareImageBtn.addEventListener('click', async () => {
+        if (!currentBlob && currentCanvas) {
+            currentCanvas.toBlob(blob => { currentBlob = blob; shareBlob(currentBlob); }, 'image/png');
+        } else if (currentBlob) {
+            shareBlob(currentBlob);
+        } else {
+            alert('Generate the price list first.');
+        }
+    });
+
+    async function shareBlob(blob) {
+        if (!blob) return;
+        const file = new File([blob], 'price_list.png', { type: 'image/png' });
+        const shareData = { title: 'My Price List', text: 'Check out my price list!', files: [file] };
+        if (navigator.canShare && navigator.canShare(shareData)) {
+            try {
+                await navigator.share(shareData);
+            } catch(err) {
+                if (err.name !== 'AbortError') alert('Sharing failed. Use download button.');
+            }
+        } else {
+            alert('Your browser does not support direct share. Tap Download and attach manually in WhatsApp.');
+            if (currentCanvas) {
+                const link = document.createElement('a');
+                link.download = 'price_list.png';
+                link.href = currentCanvas.toDataURL();
+                link.click();
+            }
+        }
+    }
+
+    // ---------- Share as Text (opens WhatsApp directly) ----------
+    shareTextBtn.addEventListener('click', () => {
+        const businessName = businessNameInput.value.trim();
+        const rows = document.querySelectorAll('.item-row');
+        let message = `📋 *PRICE LIST* 📋\n\n`;
+        if (businessName) message += `🏪 *${businessName}*\n\n`;
+        message += `*Products & Prices:*\n`;
+        let hasItems = false;
+        for (let row of rows) {
+            const name = row.querySelector('.item-name').value.trim();
+            let price = row.querySelector('.item-price').value.trim();
+            if (name && price) {
+                if (!price.startsWith('₦')) price = '₦' + price;
+                message += `• ${name} : ${price}\n`;
+                hasItems = true;
+            }
+        }
+        if (!hasItems) {
+            alert('Add at least one product.');
+            return;
+        }
+        message += `\n_Generated with PriceListNaija_`;
+        const encodedMessage = encodeURIComponent(message);
+        // Use WhatsApp API to open directly (works on mobile and web)
+        window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+    });
+
+    // Download button
+    downloadBtn.addEventListener('click', () => {
+        if (currentCanvas) {
+            const link = document.createElement('a');
+            link.download = 'my_price_list.png';
+            link.href = currentCanvas.toDataURL();
+            link.click();
+        } else {
+            alert('Generate the price list first.');
+        }
+    });
+
+    // Initialize
+    loadData();
+</script>
+</body>
+  </html>
